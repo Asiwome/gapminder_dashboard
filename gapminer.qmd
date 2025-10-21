@@ -1,0 +1,171 @@
+---
+title: "GAPMINDER | LIFE EXPECTABCIES 2007"
+format: dashboard
+theme: lux
+---
+
+```{r}
+# load packages
+if(!require(pacman))
+  install.packages("pacman")
+pacman::p_load(tidyverse, gapminder, bslib, bsicons,shiny, rnaturalearth,plotly, countrycode, reactable, htmltools
+)
+```
+
+
+```{r}
+# load packages
+g27 <- gapminder |> filter(year==2007)
+
+high_life_expe_country <- g27 |> arrange(-lifeExp) |> head(1) |> 
+  pull(country)  
+
+high_life_expe_value <- g27 |> arrange(-lifeExp) |> head(1) |> 
+  pull(lifeExp) |> round(1)
+
+
+
+low_life_expe_country <- g27 |> arrange(lifeExp) |> head(1) |> 
+  pull(country)  
+
+low_life_expe_value <- g27 |> arrange(lifeExp) |> head(1) |> 
+  pull(lifeExp) |> round(1)
+
+
+ave_life_exp <- g27 |> 
+  summarise(
+    weighted_mean =round(weighted.mean(lifeExp, pop),1)
+  )
+
+```
+
+
+
+```{r}
+ 
+country_shapes <- rnaturalearth::ne_countries()
+
+
+ 
+g27 <- g27 |> mutate(country_code = countrycode(country,"country.name","iso3c"))
+
+
+gap_map <- left_join(country_shapes, g27, by=c("adm0_a3"="country_code")) |> 
+  mutate(tooltip_lab = paste(country, round(lifeExp,1),sep = ": ")) |> 
+  ggplot()+
+  geom_sf(aes(fill=lifeExp, text= tooltip_lab)) + theme_void()+theme(legend.position = "none")
+
+gap_map_plt <- ggplotly(gap_map, tooltip = "text")
+
+```
+
+
+```{r}
+top20_conuntries <- g27 |> 
+  arrange(desc(lifeExp)) |> 
+  head(20) |> 
+   mutate(tooltip_lab = paste(country, round(lifeExp,1),sep = ": ")) |> 
+  ggplot(aes(y= reorder(country,lifeExp), x =lifeExp, fill=lifeExp, text=tooltip_lab)) +
+  geom_col()+
+  geom_text(aes(label= round(lifeExp, 1)),
+    nudge_x = -10, color = "white"
+    )+ 
+  labs(y="Country", x="Life Exp") + theme(legend.position = "none")
+
+top20_conuntries_plty <-  ggplotly(top20_conuntries, tooltip = "text")
+```
+
+
+
+
+# HOME
+
+## ROW 1 {height=25%}
+
+```{r}
+value_box(
+  title = "Highest Life Expectancy",
+  value =high_life_expe_value,
+  showcase = bsicons::bs_icon("heart"),
+  theme=value_box_theme(bg="#518fd6"),
+  p(paste0("(", high_life_expe_country, ")"))
+)
+```
+
+
+```{r}
+value_box(
+  title = "Lowest Life Expectancy",
+  value =low_life_expe_value,
+  showcase = bsicons::bs_icon("thermometer"),
+  theme=value_box_theme(bg="#214773"),
+  p(paste0("(", low_life_expe_country, ")"))
+)
+```
+
+
+```{r}
+value_box(
+  title = "Average Life Expectancy",
+  value = ave_life_exp,
+  showcase = bsicons::bs_icon("graph-up"),
+ theme=value_box_theme(bg="#3f71ab")
+)
+```
+
+## ROW 2  {height=25%}
+
+###  {width=70%}
+
+```{r title = "Map of Countries by Life Expectancy"}
+gap_map_plt
+```
+
+###  {width=30%}
+```{r title= "Top 20 Countries by Life Expectancy"}
+top20_conuntries_plty
+```
+
+
+# DOWNLOAD DATA
+
+This data was used in developing this Dashboard. Click on the button below to download
+
+```{r }
+htmltools::browsable(
+  tagList(
+    reactable(
+      gapminder,
+      searchable = TRUE,
+      defaultPageSize = 5,
+      elementId = "gapminder"
+    ),
+    tags$button(
+      tagList(fontawesome::fa("download"), "Download as CSV"),
+      onclick = "Reactable.downloadDataCSV('gapminder', 'cars.csv')"
+    )
+  )
+)
+
+``` 
+
+
+
+
+# ABOUT
+
+This data is from `gapminder` r package originally from Gapminder Foundation
+
+Gapminder Foundation is a non-profit venture registered in Stockholm, Sweden, that promotes sustainable global development and achievement of the United Nations Millennium Development Goals by increased use and understanding of statistics and other information about social, economic, and environmental development at local, national, and global levels.
+
+Check out one of the Gapminder's popular Stats video of all the time!!
+
+<iframe width="677" height="392" src="https://www.youtube.com/embed/hVimVzgtD6w" title="The best stats you&#39;ve ever seen | Hans Rosling" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+
+
+
+
+
+
+
+
